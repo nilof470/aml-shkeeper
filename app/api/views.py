@@ -18,16 +18,10 @@ from app import create_app
 app = create_app()
 app.app_context().push()
 
-eth_list = ['ETH', 'ETH-USDT', 'ETH-USDC', 'ETH-PYUSD']
-trx_list = ['TRX', 'USDT', 'USDC']
 
 def add_transaction_to_db(hash, account, amount, symbol, internal_type=False):
         logger.info('Adding tx to DB')
         status = ''
-        if symbol in eth_list:
-            symbol = 'ETH'
-        elif symbol in trx_list:
-            symbol = 'TRX'
 
         if float(amount) > float(get_min_check_amount(symbol)):
             check_transaction.delay(symbol, account, hash)
