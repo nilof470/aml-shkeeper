@@ -30,6 +30,43 @@ def check_transaction(self, symbol, account, txid):
         status = 'ready'
         score = result['data']['riskscore']
         uid = result['data']['uid']
+    elif not result['result']:
+        try:
+            from app import create_app
+            app = create_app()
+            app.app_context().push()
+            try:
+                pd = Transactions.query.filter_by(address = account, tx_id = txid).first()
+            except:
+                db.session.rollback()
+                raise Exception(f"There was exception during query to the database, try again later")
+            attempts = pd.attempts 
+            attempts = attempts + 1
+            if attempts >= config["RETRY_UNTIL_FAILED"]:
+                score = -2
+                status = 'failed'
+                if  'description' in result.keys():
+                    description = result['description']
+                else:
+                    description = result
+                pd.score = score
+                pd.data = description
+                pd.status = status
+                pd.attempts = attempts
+            else:
+                pd.attempts = attempts
+
+            with app.app_context():
+                db.session.add(pd)
+                db.session.commit()
+                db.session.close() 
+
+        finally:
+            with app.app_context():
+                db.session.remove()
+                db.engine.dispose()
+        return True
+
     else:
         logger.warning(f'Cannot update the transaction {txid}, something wrong - {result}')
         return False
@@ -100,6 +137,44 @@ def recheck_transaction(self, uid, txid ):
         status = 'ready'
         score = result['data']['riskscore']
         uid = result['data']['uid']
+
+    elif not result['result']:
+        try:
+            from app import create_app
+            app = create_app()
+            app.app_context().push()
+            try:
+                pd = Transactions.query.filter_by(address = account, tx_id = txid).first()
+            except:
+                db.session.rollback()
+                raise Exception(f"There was exception during query to the database, try again later")
+            attempts = pd.attempts 
+            attempts = attempts + 1
+            if attempts >= config["RETRY_UNTIL_FAILED"]:
+                score = -2
+                status = 'failed'
+                if  'description' in result.keys():
+                    description = result['description']
+                else:
+                    description = result
+                pd.score = score
+                pd.data = description
+                pd.status = status
+                pd.attempts = attempts
+            else:
+                pd.attempts = attempts
+
+            with app.app_context():
+                db.session.add(pd)
+                db.session.commit()
+                db.session.close() 
+
+        finally:
+            with app.app_context():
+                db.session.remove()
+                db.engine.dispose()
+        return True
+
     else:
         logger.warning(f'Cannot update the transaction {txid}, something wrong - {result}')
         return False

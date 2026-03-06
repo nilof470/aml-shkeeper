@@ -12,6 +12,7 @@ class Transactions(db.Model):
     address = db.Column(db.String(70))
     uid = db.Column(db.String(30))
     data = db.Column(db.String(70))
+    attempts = db.Column(db.Numeric(precision=7, scale=2), default=0)
     last_update = db.Column(db.DateTime, default=db.func.current_timestamp(),
                                         onupdate=db.func.current_timestamp()) 
     __table_args__ = (db.UniqueConstraint('id'), )
