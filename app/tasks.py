@@ -48,7 +48,7 @@ def check_transaction(self, symbol, account, txid):
                 if  'description' in result.keys():
                     description = result['description']
                 else:
-                    description = result
+                    description = str(result)
                 pd.score = score
                 pd.data = description
                 pd.status = status
@@ -113,7 +113,7 @@ def recheck_transactions(self):
  
     if pd:
         for tx in pd:
-            recheck_transaction.delay(tx.uid, tx.tx_id)
+            recheck_transaction.delay(tx.uid, tx.tx_id, tx.address)
     if pd_pending:
         for tx in pd_pending:
             check_transaction.delay(tx.crypto, tx.address, tx.tx_id)
@@ -122,7 +122,7 @@ def recheck_transactions(self):
 
 @celery.task(bind=True)
 @skip_if_running
-def recheck_transaction(self, uid, txid ):
+def recheck_transaction(self, uid, txid, account_address):
     result = aml_recheck_transaction(uid, txid)
     if (result['result'] and 
         result['data']['status'] == 'pending'and 
@@ -144,7 +144,7 @@ def recheck_transaction(self, uid, txid ):
             app = create_app()
             app.app_context().push()
             try:
-                pd = Transactions.query.filter_by(address = account, tx_id = txid).first()
+                pd = Transactions.query.filter_by(address = account_address, tx_id = txid).first()
             except:
                 db.session.rollback()
                 raise Exception(f"There was exception during query to the database, try again later")
@@ -156,7 +156,7 @@ def recheck_transaction(self, uid, txid ):
                 if  'description' in result.keys():
                     description = result['description']
                 else:
-                    description = result
+                    description = str(result)
                 pd.score = score
                 pd.data = description
                 pd.status = status
@@ -180,7 +180,7 @@ def recheck_transaction(self, uid, txid ):
         return False
     
     try:
-        pd = Transactions.query.filter_by( tx_id = txid).first() #address = address
+        pd = Transactions.query.filter_by(address = account_address, tx_id = txid).first()
     except:
         db.session.rollback()
         raise Exception(f"There was exception during query to the database, try again later")
