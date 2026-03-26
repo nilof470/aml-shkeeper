@@ -29,10 +29,10 @@ def add_transaction_to_db(hash, account, amount, symbol, internal_type=False):
             status = 'pending'
             score = -1
         else:
-            logger.warning('Transaction amount is lower than min check amount in config. Adding it with max score')
+            logger.warning('Transaction amount is lower than min check amount in config. Adding it with min score')
             ttype = 'aml'
             status = 'ready'
-            score = 1
+            score = 0
         try:
     
             with app.app_context():
