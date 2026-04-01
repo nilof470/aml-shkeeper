@@ -31,6 +31,7 @@ def check_transaction(self, symbol, account, txid):
         score = result['data']['riskscore']
         uid = result['data']['uid']
     elif not result['result']:
+        logger.warning(f"Get unsuccessful response {result} while check {txid}")
         try:
             from app import create_app
             app = create_app()
@@ -139,6 +140,7 @@ def recheck_transaction(self, uid, txid, account_address):
         uid = result['data']['uid']
 
     elif not result['result']:
+        logger.warning(f"Get unsuccessful response {result} while recheck {txid}")
         try:
             from app import create_app
             app = create_app()
