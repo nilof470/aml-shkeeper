@@ -33,8 +33,6 @@ def symbol_to_aml_asset(symbol):
     return asset
 
     
-
-
 def get_min_check_amount(symbol):
     return float(config['PROVIDERS'][config['CURRENT_PROVIDER']]['cryptos'][symbol]['min_check_amount'])
    
@@ -49,8 +47,8 @@ def aml_check_transaction(symbol, address, txid):
     return response.json()
 
 
-def aml_recheck_transaction(uid, txid):
-    token_string = f'{txid}:{ACCESS_KEY}:{ACCESS_ID}'
+def aml_recheck_transaction(uid):
+    token_string = f'{uid}:{ACCESS_KEY}:{ACCESS_ID}'
     token = str(hashlib.md5(token_string.encode()).hexdigest())
     payload = f'uid={uid}&accessId={ACCESS_ID}&token={token}'
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
