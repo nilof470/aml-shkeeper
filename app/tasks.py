@@ -124,7 +124,7 @@ def recheck_transactions(self):
 @celery.task(bind=True)
 @skip_if_running
 def recheck_transaction(self, uid, txid, account_address):
-    result = aml_recheck_transaction(uid, txid)
+    result = aml_recheck_transaction(uid)
     if (result['result'] and 
         result['data']['status'] == 'pending'and 
         'uid' in result['data'].keys()):
