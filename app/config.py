@@ -34,7 +34,7 @@ config = {
     'SHKEEPER_KEY': os.environ.get('SHKEEPER_BACKEND_KEY', 'shkeeper'),
     'SHKEEPER_HOST': os.environ.get('SHKEEPER_HOST', 'shkeeper:5000'),
     'RECHECK_TXS_EVERY_SECONDS': int(os.environ.get('RECHECK_TXS_EVERY_SECONDS', '120')),
-    'AVAILABLE_CRYPTO_LIST': ['ETH', 'TRX', 'ETH-USDC', 'ETH-USDT', 'USDT', 'USDC'],
+    'AVAILABLE_CRYPTO_LIST': ['ETH', 'TRX', 'ETH-USDC', 'ETH-USDT', 'USDT', 'USDC','SOL', 'SOLANA-USDT', 'SOLANA-USDC', 'SOLANA-PYUSD'],
     'CURRENT_PROVIDER':  os.environ.get('CURRENT_PROVIDER', 'amlbot'),
     'RETRY_UNTIL_FAILED': int(os.environ.get('RETRY_UNTIL_FAILED', '3')),
     'PROVIDERS': get_providers_config(),
