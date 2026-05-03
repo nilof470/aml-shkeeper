@@ -6,9 +6,11 @@ from ..config import config
 from ..logging import logger
 
 api = Blueprint('api', __name__, url_prefix='/<symbol>')
+v1_api = Blueprint('v1_api', __name__, url_prefix='/api/v1')
 metrics_blueprint = Blueprint('metrics_blueprint', __name__, url_prefix='/')
 
 @metrics_blueprint.before_request
+@v1_api.before_request
 @api.before_request
 def check_credentials():
     auth = request.authorization
@@ -28,6 +30,7 @@ def pull_symbol(endpoint, values):
 
 
 @api.errorhandler(Exception)
+@v1_api.errorhandler(Exception)
 def handle_exception(e):
     if isinstance(e, HTTPException):
         return e
@@ -35,5 +38,4 @@ def handle_exception(e):
     return {"status": "error", "msg": str(e)}
 
 from . import views
-
 

@@ -31,6 +31,9 @@ def create_app():
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint)
 
+    from .api import v1_api as v1_api_blueprint
+    app.register_blueprint(v1_api_blueprint)
+
     from .api import metrics_blueprint
     app.register_blueprint(metrics_blueprint)
 

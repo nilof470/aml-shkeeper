@@ -3,7 +3,19 @@ import json
 
 
 def get_providers_config():
-    provides_config = json.loads(os.environ.get('PROVIDERS'))
+    providers = os.environ.get('PROVIDERS')
+    if not providers:
+        return {
+            "amlbot": {
+                "state": "enabled",
+                "access_id": "",
+                "access_key": "",
+                "access_point": "https://extrnlapiendpoint.silencatech.com",
+                "flow": "fast",
+                "cryptos": {},
+            }
+        }
+    provides_config = json.loads(providers)
     return provides_config
 
     # EXAMPLE
@@ -34,10 +46,12 @@ config = {
     'SHKEEPER_KEY': os.environ.get('SHKEEPER_BACKEND_KEY', 'shkeeper'),
     'SHKEEPER_HOST': os.environ.get('SHKEEPER_HOST', 'shkeeper:5000'),
     'RECHECK_TXS_EVERY_SECONDS': int(os.environ.get('RECHECK_TXS_EVERY_SECONDS', '120')),
-    'AVAILABLE_CRYPTO_LIST': ['ETH', 'TRX', 'ETH-USDC', 'ETH-USDT', 'USDT', 'USDC','SOL', 'SOLANA-USDT', 'SOLANA-USDC', 'SOLANA-PYUSD'],
+    'AVAILABLE_CRYPTO_LIST': ['BTC', 'LTC', 'DOGE', 'ETH', 'ETH-USDT', 'ETH-USDC', 'ETH-PYUSD', 'TRX', 'USDT', 'USDC', 'SOL', 'SOLANA-USDT', 'SOLANA-USDC', 'SOLANA-PYUSD'],
     'CURRENT_PROVIDER':  os.environ.get('CURRENT_PROVIDER', 'amlbot'),
     'RETRY_UNTIL_FAILED': int(os.environ.get('RETRY_UNTIL_FAILED', '3')),
+    'CHECK_TIMEOUT_SECONDS': int(os.environ.get('CHECK_TIMEOUT_SECONDS', '1800')),
+    'CHECK_RETRY_SECONDS': int(os.environ.get('CHECK_RETRY_SECONDS', '120')),
+    'AML_DEFAULT_THRESHOLD': os.environ.get('AML_DEFAULT_THRESHOLD', '0.10'),
     'PROVIDERS': get_providers_config(),
 }
-
 
