@@ -2,18 +2,18 @@ import base64
 import json
 import os
 import unittest
+from decimal import Decimal
 
 os.environ["SQLALCHEMY_DATABASE_URI"] = "sqlite:////tmp/aml_shkeeper_tests.sqlite"
 os.environ.setdefault(
     "PROVIDERS",
     json.dumps(
         {
-            "amlbot": {
+            "koinkyt": {
                 "state": "enabled",
-                "access_id": "test-id",
-                "access_key": "test-key",
-                "access_point": "https://amlbot.example",
-                "flow": "fast",
+                "api_key": "test-key",
+                "access_point": "https://koinkyt.example/openapi/v1",
+                "risk_profile_ids": "",
                 "cryptos": {},
             }
         }
@@ -77,10 +77,49 @@ class ChecksApiTestCase(unittest.TestCase):
         response = self.client.get("/api/v1/checks/shkeeper-tx-1", headers=auth_header())
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json["provider"], "amlbot")
+        self.assertEqual(response.json["provider"], "koinkyt")
         self.assertEqual(response.json["provider_status"], "pending")
         self.assertEqual(response.json["signals"], {})
         self.assertIn("updated_at", response.json)
+
+    def test_post_checks_rejects_unsupported_crypto(self):
+        payload = self.payload()
+        payload["crypto"] = "DOGE"
+
+        response = self.client.post("/api/v1/checks", json=payload, headers=auth_header())
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json["status"], "error")
+        self.assertEqual(response.json["msg"], "unsupported crypto")
+        self.assertEqual(Transactions.query.count(), 0)
+
+    def test_duplicate_check_returns_existing_even_if_crypto_now_unsupported(self):
+        payload = self.payload()
+        payload["crypto"] = "DOGE"
+        existing = Transactions(
+            deposit_id=payload["deposit_id"],
+            idempotency_key=payload["idempotency_key"],
+            tx_id=payload["txid"],
+            status="pending",
+            ttype="aml",
+            provider="amlbot",
+            provider_status="pending",
+            crypto="DOGE",
+            amount=Decimal("0.25"),
+            address=payload["address"],
+            asset="DOGE",
+            network="DOGE",
+            threshold=Decimal("0.10"),
+        )
+        db.session.add(existing)
+        db.session.commit()
+
+        response = self.client.post("/api/v1/checks", json=payload, headers=auth_header())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["deposit_id"], payload["deposit_id"])
+        self.assertEqual(response.json["crypto"], "DOGE")
+        self.assertEqual(Transactions.query.count(), 1)
 
     def test_legacy_duplicate_returns_existing_state(self):
         payload = {"hash": "legacy-tx", "account": "bc1qaddress", "amount": "0.25"}

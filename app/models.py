@@ -14,7 +14,7 @@ class Transactions(db.Model):
     address = db.Column(db.String(128))
     uid = db.Column(db.String(128))
     data = db.Column(db.Text)
-    provider = db.Column(db.String(30), default="amlbot")
+    provider = db.Column(db.String(30), default="koinkyt")
     provider_status = db.Column(db.String(30))
     asset = db.Column(db.String(30))
     network = db.Column(db.String(30))

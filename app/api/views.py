@@ -18,7 +18,7 @@ def add_transaction_to_db(hash, account, amount, symbol, internal_type=False):
     tx = Transactions(
         tx_id=hash,
         status='pending',
-        provider='amlbot',
+        provider=config['CURRENT_PROVIDER'],
         provider_status='pending',
         ttype='aml',
         crypto=symbol,
@@ -185,13 +185,16 @@ def create_check():
     if existing:
         return _serialize_check(existing), 200
 
+    if tx_info['crypto'] not in config['AVAILABLE_CRYPTO_LIST']:
+        return {'status': 'error', 'msg': 'unsupported crypto'}, 400
+
     tx = Transactions(
         deposit_id=tx_info['deposit_id'],
         idempotency_key=tx_info['idempotency_key'],
         tx_id=tx_info['txid'],
         status='pending',
         ttype='aml',
-        provider='amlbot',
+        provider=config['CURRENT_PROVIDER'],
         provider_status='pending',
         crypto=tx_info['crypto'],
         amount=Decimal(str(tx_info['amount_crypto'])),

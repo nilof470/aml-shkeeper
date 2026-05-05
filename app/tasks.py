@@ -3,12 +3,17 @@ import json
 from datetime import datetime, timedelta
 
 from celery.utils.log import get_task_logger
+from sqlalchemy import or_
 
 from . import celery
 from .config import config
 from .models import Transactions, db
 from .utils import skip_if_running
-from .aml_bot_api import aml_check_transaction, aml_recheck_transaction, normalize_amlbot_response
+from .aml_bot_api import (
+    aml_check_transaction,
+    aml_recheck_transaction,
+    normalize_provider_response,
+)
 
 logger = get_task_logger(__name__)
 
@@ -22,7 +27,7 @@ def _create_app_context():
 
 
 def _persist_normalized_result(check, result):
-    normalized = normalize_amlbot_response(result)
+    normalized = normalize_provider_response(result)
     now = datetime.utcnow()
     check.attempts = int(check.attempts or 0) + 1
     check.provider_status = normalized['provider_status']
@@ -35,23 +40,34 @@ def _persist_normalized_result(check, result):
     check.asset = normalized['asset'] or check.asset
     check.network = normalized['network'] or check.network
 
+    if check.timeout_at is None:
+        check.timeout_at = now + timedelta(seconds=config['CHECK_TIMEOUT_SECONDS'])
+    timed_out = check.timeout_at <= now
+
     if normalized['provider_status'] == 'success' and normalized['score'] is not None:
         check.score = normalized['score']
         check.status = 'ready'
         check.next_retry_at = None
-    elif normalized['provider_status'] == 'pending':
-        check.status = 'rechecking'
-        check.next_retry_at = now + timedelta(seconds=config['CHECK_RETRY_SECONDS'])
+    elif normalized['provider_status'] in ('pending', 'checking'):
+        if timed_out:
+            check.status = 'timeout'
+            check.provider_status = 'timeout'
+            check.next_retry_at = None
+            check.error_code = check.error_code or 'aml_pending_timeout'
+            check.error_message = check.error_message or 'AML provider result timed out'
+        else:
+            check.status = 'rechecking'
+            check.next_retry_at = now + timedelta(seconds=config['CHECK_RETRY_SECONDS'])
     else:
-        if int(check.attempts or 0) >= int(config['RETRY_UNTIL_FAILED']):
+        if normalized.get('retryable') is False:
+            check.status = 'failed'
+            check.next_retry_at = None
+        elif int(check.attempts or 0) >= int(config['RETRY_UNTIL_FAILED']):
             check.status = 'failed'
             check.next_retry_at = None
         else:
             check.status = 'pending'
             check.next_retry_at = now + timedelta(seconds=config['CHECK_RETRY_SECONDS'])
-
-    if check.timeout_at is None:
-        check.timeout_at = now + timedelta(seconds=config['CHECK_TIMEOUT_SECONDS'])
 
 
 @celery.task(bind=True)
@@ -84,8 +100,21 @@ def recheck_transactions(self):
     context = None
     try:
         _, context = _create_app_context()
-        pd = Transactions.query.filter_by(ttype = 'aml', status = 'rechecking').all()
-        pd_pending = Transactions.query.filter_by(ttype = 'aml', status = 'pending').all()
+        now = datetime.utcnow()
+        retry_due = or_(
+            Transactions.next_retry_at == None,
+            Transactions.next_retry_at <= now,
+        )
+        pd = Transactions.query.filter(
+            Transactions.ttype == 'aml',
+            Transactions.status == 'rechecking',
+            retry_due,
+        ).all()
+        pd_pending = Transactions.query.filter(
+            Transactions.ttype == 'aml',
+            Transactions.status == 'pending',
+            retry_due,
+        ).all()
     except:
         db.session.rollback()
         raise Exception(f"There was exception during query to the database, try again later")
@@ -116,6 +145,12 @@ def recheck_transaction(self, check_id, txid=None, account_address=None):
         if not check:
             logger.warning(f'Cannot find AML check {check_id}')
             return False
+        if config['CURRENT_PROVIDER'] == 'koinkyt':
+            result = aml_check_transaction(check.crypto, check.address, check.tx_id)
+            _persist_normalized_result(check, result)
+            db.session.add(check)
+            db.session.commit()
+            return True
         if not check.uid:
             return check_transaction.delay(check.id)
         result = aml_recheck_transaction(check.uid)

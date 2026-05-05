@@ -8,12 +8,11 @@ os.environ.setdefault(
     "PROVIDERS",
     json.dumps(
         {
-            "amlbot": {
+            "koinkyt": {
                 "state": "enabled",
-                "access_id": "test-id",
-                "access_key": "test-key",
-                "access_point": "https://amlbot.example",
-                "flow": "fast",
+                "api_key": "test-key",
+                "access_point": "https://koinkyt.example/openapi/v1",
+                "risk_profile_ids": "",
                 "cryptos": {},
             }
         }
