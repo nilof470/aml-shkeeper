@@ -100,7 +100,7 @@ def normalize_koinkyt_response(response):
             503,
         )
         if status == 404:
-            retryable = 'try again later' in error_text.lower()
+            retryable = True
         return {
             'provider_status': 'checking' if retryable else 'error',
             'uid': response.get('id'),

@@ -107,7 +107,7 @@ class AmlBotNormalizationTestCase(unittest.TestCase):
         self.assertEqual(result["error_code"], "http_404")
         self.assertIsNone(result["score"])
 
-    def test_koinkyt_final_404_is_non_retryable_error(self):
+    def test_koinkyt_transaction_not_found_is_retryable(self):
         result = normalize_koinkyt_response(
             {
                 "_http_status": 404,
@@ -116,8 +116,8 @@ class AmlBotNormalizationTestCase(unittest.TestCase):
             }
         )
 
-        self.assertEqual(result["provider_status"], "error")
-        self.assertFalse(result["retryable"])
+        self.assertEqual(result["provider_status"], "checking")
+        self.assertTrue(result["retryable"])
         self.assertIsNone(result["score"])
 
     def test_koinkyt_transport_error_is_checking(self):
