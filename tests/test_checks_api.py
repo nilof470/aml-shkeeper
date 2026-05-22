@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import sqlite3
 import unittest
 from decimal import Decimal
 
@@ -25,9 +26,96 @@ from app.api import views
 from app.models import Transactions, db
 
 
+TEST_DB_PATH = "/tmp/aml_shkeeper_tests.sqlite"
+
+
 def auth_header():
     token = base64.b64encode(b"shkeeper:shkeeper").decode("ascii")
     return {"Authorization": f"Basic {token}"}
+
+
+class LegacySchemaMigrationTestCase(unittest.TestCase):
+    def setUp(self):
+        try:
+            os.remove(TEST_DB_PATH)
+        except FileNotFoundError:
+            pass
+
+    def tearDown(self):
+        db.session.remove()
+        try:
+            os.remove(TEST_DB_PATH)
+        except FileNotFoundError:
+            pass
+
+    def create_legacy_transactions_table(self):
+        connection = sqlite3.connect(TEST_DB_PATH)
+        try:
+            connection.execute(
+                """
+                CREATE TABLE transactions (
+                    id INTEGER NOT NULL,
+                    tx_id VARCHAR(120),
+                    status VARCHAR(10),
+                    ttype VARCHAR(10),
+                    score NUMERIC(7, 5),
+                    crypto VARCHAR(20),
+                    amount NUMERIC(52, 26),
+                    address VARCHAR(70),
+                    uid VARCHAR(30),
+                    data VARCHAR(70),
+                    attempts NUMERIC(7, 2),
+                    last_update DATETIME,
+                    PRIMARY KEY (id),
+                    UNIQUE (id)
+                )
+                """
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+    def test_create_app_migrates_legacy_transactions_table(self):
+        self.create_legacy_transactions_table()
+
+        app = create_app()
+        app.config["TESTING"] = True
+        ctx = app.app_context()
+        ctx.push()
+        self.addCleanup(ctx.pop)
+
+        columns = {
+            row[1]
+            for row in db.session.execute("PRAGMA table_info(transactions)")
+        }
+        self.assertIn("deposit_id", columns)
+        self.assertIn("idempotency_key", columns)
+        self.assertIn("provider_status", columns)
+        self.assertIn("timeout_at", columns)
+
+        client = app.test_client()
+        original_delay = views.check_transaction.delay
+        views.check_transaction.delay = lambda *args, **kwargs: None
+        self.addCleanup(lambda: setattr(views.check_transaction, "delay", original_delay))
+
+        response = client.post(
+            "/api/v1/checks",
+            json={
+                "deposit_id": "deposit-1",
+                "idempotency_key": "BTC:txid-1:deposit-1",
+                "crypto": "BTC",
+                "txid": "txid-1",
+                "address": "bc1qaddress",
+                "amount_crypto": "0.25",
+                "asset": "BTC",
+                "network": "BTC",
+                "direction": "deposit",
+            },
+            headers=auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json["deposit_id"], "deposit-1")
 
 
 class ChecksApiTestCase(unittest.TestCase):

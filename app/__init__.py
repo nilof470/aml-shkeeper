@@ -43,6 +43,8 @@ def create_app():
         # Create tables according to models
         from .models import Transactions
         db.create_all()
+        from .schema_migrations import ensure_transactions_schema
+        ensure_transactions_schema(db)
     
 
     return app
