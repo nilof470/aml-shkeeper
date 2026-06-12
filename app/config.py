@@ -162,6 +162,6 @@ config = {
             os.environ.get('REQUESTS_TIMEOUT', '10'),
         )
     ),
-    'AML_DEFAULT_THRESHOLD': os.environ.get('AML_DEFAULT_THRESHOLD', '0.10'),
+    'AML_DEFAULT_THRESHOLD': os.environ.get('AML_DEFAULT_THRESHOLD', '0.70'),
     'PROVIDERS': PROVIDERS_CONFIG,
 }
