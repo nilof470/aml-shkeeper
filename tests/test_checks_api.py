@@ -170,15 +170,15 @@ class ChecksApiTestCase(unittest.TestCase):
         self.assertEqual(response.json["signals"], {})
         self.assertIn("updated_at", response.json)
 
-    def test_post_checks_without_threshold_uses_default_zero_point_seventy(self):
+    def test_post_checks_without_threshold_uses_default_zero_point_thirty(self):
         response = self.client.post(
             "/api/v1/checks", json=self.payload(), headers=auth_header()
         )
 
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(Decimal(response.json["threshold"]), Decimal("0.70"))
+        self.assertEqual(Decimal(response.json["threshold"]), Decimal("0.30"))
         stored = Transactions.query.filter_by(deposit_id="shkeeper-tx-1").one()
-        self.assertEqual(stored.threshold, Decimal("0.70"))
+        self.assertEqual(stored.threshold, Decimal("0.30"))
 
     def test_post_checks_rejects_unsupported_crypto(self):
         payload = self.payload()
